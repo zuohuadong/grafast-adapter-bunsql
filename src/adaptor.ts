@@ -172,6 +172,16 @@ export function makePgService(
   // Create subscriber (using polling method)
   let pgSubscriber = options.pgSubscriber ?? null;
   if (!pgSubscriber && pubsub) {
+    console.warn(
+      "WARNING: Using experimental polling-based LISTEN/NOTIFY implementation.\n" +
+      "This approach has significant limitations:\n" +
+      "- Has latency (depends on polling interval)\n" +
+      "- Requires additional database table\n" +
+      "- Consumes more resources\n" +
+      "- Not as efficient as native LISTEN/NOTIFY\n\n" +
+      "Only enable this feature if you understand these limitations and\n" +
+      "have no alternative solution."
+    );
     pgSubscriber = new BunPgSubscriber(sql, subscriberOptions);
     releasers.push(() => pgSubscriber!.release?.());
   }

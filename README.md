@@ -6,8 +6,8 @@ Bun SQL native adaptor for @dataplan/pg, enabling high-performance GraphQL APIs 
 
 - 🚀 **High Performance** - Leverages Bun's native PostgreSQL driver for 20-80% better performance
 - 🔌 **Drop-in Replacement** - Compatible API with @dataplan/pg's pg adapter
-- 📡 **Pub/Sub Support** - Implements LISTEN/NOTIFY via polling mechanism
-- 📢 **NOTICE Messages** - Experimental support for PostgreSQL NOTICE messages
+- 📡 **Experimental Pub/Sub Support** - Implements LISTEN/NOTIFY via polling mechanism (requires manual enablement)
+- 📢 **Experimental NOTICE Messages** - Experimental support for PostgreSQL NOTICE messages (requires manual enablement)
 - 🏗️ **Full Transaction Support** - Including savepoints and nested transactions
 - 🌊 **Connection Pooling** - Automatic connection management
 
@@ -112,13 +112,22 @@ await withPgClient(null, async (client) => {
 });
 ```
 
-### Pub/Sub Support
+### Experimental Pub/Sub Support
+
+⚠️ **WARNING**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't support native LISTEN/NOTIFY events, we use polling to implement similar functionality. This approach has significant limitations:
+
+- Has latency (depends on polling interval)
+- Requires additional database table
+- Consumes more resources
+- Not as efficient as native LISTEN/NOTIFY
+
+Only enable this feature if you understand these limitations and have no alternative solution.
 
 ```typescript
 const pgService = makePgService({
   connectionString: process.env.DATABASE_URL,
   schemas: ["public"],
-  pubsub: true,
+  pubsub: true,  // Enable experimental Pub/Sub support
   subscriberOptions: {
     pollInterval: 1000,
   },
@@ -136,13 +145,28 @@ for await (const payload of notifications) {
 await subscriber.notify("my_channel", "Hello World!");
 ```
 
-### NOTICE Messages (Experimental)
+#### Limitations of Pub/Sub Implementation
+
+1. **Latency**: Default 1 second (configurable) due to polling
+2. **Additional Table Required**: For notification queue
+3. **Resource Consumption**: Continuous polling consumes resources
+4. **Bun Only**: Cannot be used in Node.js
+
+### Experimental NOTICE Messages
+
+⚠️ **WARNING**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't directly expose NOTICE messages, we use a workaround to capture them. This approach has significant limitations:
+
+- May not capture all NOTICE messages
+- Relies on parsing error messages
+- Not as reliable as native NOTICE handling
+
+Only enable this feature if you understand these limitations and have no alternative solution.
 
 ```typescript
 const pgService = makePgService({
   connectionString: process.env.DATABASE_URL,
   schemas: ["public"],
-  captureNotices: true,  // Experimental feature
+  captureNotices: true,  // Enable experimental NOTICE capture
 });
 
 const result = await client.query({
@@ -151,7 +175,7 @@ const result = await client.query({
 });
 
 // Check for notices
-if (result.notices.length > 0) {
+if (result.notices && result.notices.length > 0) {
   console.log("Notices:", result.notices);
 }
 ```
@@ -166,8 +190,8 @@ if (result.notices.length > 0) {
 
 ### Classes
 
-- `BunPgSubscriber<TTopics>` - Polling-based PostgreSQL subscriber
-- `BunPgNativeSubscriber` - Alias for BunPgSubscriber
+- `BunPgSubscriber<TTopics>` - Polling-based PostgreSQL subscriber (experimental)
+- `BunPgNativeSubscriber` - Alias for BunPgSubscriber (experimental)
 
 ### Interfaces
 
@@ -185,10 +209,24 @@ if (result.notices.length > 0) {
 
 ## Limitations
 
-1. **LISTEN/NOTIFY Latency**: Default 1 second (configurable) due to polling
-2. **Incomplete NOTICE**: Only partial capture available
-3. **Additional Table Required**: For notification queue
-4. **Bun Only**: Cannot be used in Node.js
+### Experimental Features
+
+1. **Pub/Sub Support**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't support native LISTEN/NOTIFY events, we use polling to implement similar functionality. This approach has significant limitations:
+   - Has latency (depends on polling interval)
+   - Requires additional database table
+   - Consumes more resources
+   - Not as efficient as native LISTEN/NOTIFY
+
+2. **NOTICE Messages**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't directly expose NOTICE messages, we use a workaround to capture them. This approach has significant limitations:
+   - May not capture all NOTICE messages
+   - Relies on parsing error messages
+   - Not as reliable as native NOTICE handling
+
+### Other Limitations
+
+3. **LISTEN/NOTIFY Latency**: Default 1 second (configurable) due to polling
+4. **Additional Table Required**: For notification queue
+5. **Bun Only**: Cannot be used in Node.js
 
 ## Compatibility
 

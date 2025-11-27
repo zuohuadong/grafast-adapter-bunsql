@@ -94,7 +94,20 @@ export interface BunPgAdaptorMakePgServiceOptions extends MakePgServiceOptions {
   captureNotices?: boolean;
   
   /**
-   * Options for the subscriber (LISTEN/NOTIFY via polling)
+   * EXPERIMENTAL: Options for the subscriber (LISTEN/NOTIFY via polling)
+   * 
+   * WARNING: This is an experimental feature that requires manual enablement.
+   * Since Bun SQL doesn't support native LISTEN/NOTIFY events,
+   * we use polling to implement similar functionality.
+   * 
+   * This approach has significant limitations:
+   * - Has latency (depends on polling interval)
+   * - Requires additional database table
+   * - Consumes more resources
+   * - Not as efficient as native LISTEN/NOTIFY
+   * 
+   * Only enable this feature if you understand these limitations and
+   * have no alternative solution.
    */
   subscriberOptions?: {
     pollInterval?: number;
@@ -104,7 +117,10 @@ export interface BunPgAdaptorMakePgServiceOptions extends MakePgServiceOptions {
   };
   
   /**
-   * Custom subscriber instance
+   * EXPERIMENTAL: Custom subscriber instance
+   * 
+   * WARNING: This is an experimental feature that requires manual enablement.
+   * See subscriberOptions for more details about limitations.
    */
   pgSubscriber?: any;
 }

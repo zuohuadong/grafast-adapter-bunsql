@@ -1,10 +1,34 @@
 /**
- * LISTEN/NOTIFY support (implemented via polling)
+ * EXPERIMENTAL: Polling-based PostgreSQL LISTEN/NOTIFY implementation
  * 
- * Note: Since Bun SQL doesn't support native LISTEN/NOTIFY events,
+ * WARNING: This is an experimental feature that requires manual enablement.
+ * Since Bun SQL doesn't support native LISTEN/NOTIFY events,
  * we use polling to implement similar functionality.
  * 
- * This is not as efficient as native LISTEN/NOTIFY, but can serve as an alternative.
+ * This approach has significant limitations:
+ * - Has latency (depends on polling interval)
+ * - Requires additional database table
+ * - Consumes more resources
+ * - Not as efficient as native LISTEN/NOTIFY
+ * 
+ * Only enable this feature if you understand these limitations and
+ * have no alternative solution.
+ * 
+ * How it works:
+ * 1. Create a notification table to store messages
+ * 2. Use timer to poll for new messages
+ * 3. Simulate LISTEN/NOTIFY behavior
+ * 
+ * Advantages:
+ * - Works in Bun
+ * - Message persistence (messages don't get lost)
+ * - Can view historical messages
+ * 
+ * Disadvantages:
+ * - Has latency (depends on polling interval)
+ * - Requires additional database table
+ * - Consumes more resources
+ * - Not as efficient as native LISTEN/NOTIFY
  */
 
 // Type definitions for Grafast - these would be available from grafast when installed
@@ -92,24 +116,6 @@ interface NotificationRow {
 // Type definition for Timer
 type Timer = ReturnType<typeof setInterval>;
 
-/**
- * Polling-based PostgreSQL LISTEN/NOTIFY implementation
- * 
- * How it works:
- * 1. Create a notification table to store messages
- * 2. Use timer to poll for new messages
- * 3. Simulate LISTEN/NOTIFY behavior
- * 
- * Advantages:
- * - Works in Bun
- * - Message persistence (messages don't get lost)
- * - Can view historical messages
- * 
- * Disadvantages:
- * - Has latency (depends on polling interval)
- * - Requires additional database table
- * - Consumes more resources
- */
 export class BunPgSubscriber<
   TTopics extends { [key: string]: string } = { [key: string]: string }
 > implements GrafastSubscriber<TTopics> {
@@ -145,6 +151,17 @@ export class BunPgSubscriber<
       messageRetention?: number;
     } = {}
   ) {
+    console.warn(
+      "WARNING: Using experimental polling-based LISTEN/NOTIFY implementation.\n" +
+      "This approach has significant limitations:\n" +
+      "- Has latency (depends on polling interval)\n" +
+      "- Requires additional database table\n" +
+      "- Consumes more resources\n" +
+      "- Not as efficient as native LISTEN/NOTIFY\n\n" +
+      "Only enable this feature if you understand these limitations and\n" +
+      "have no alternative solution."
+    );
+    
     const {
       pollInterval = 1000,
       tableName = "pg_notify_queue",
@@ -389,6 +406,9 @@ export class BunPgSubscriber<
 }
 
 /**
- * Native BunPgSubscriber (alias for compatibility)
+ * EXPERIMENTAL: Native BunPgSubscriber (alias for compatibility)
+ * 
+ * WARNING: This is an experimental feature that requires manual enablement.
+ * See BunPgSubscriber for more details about limitations.
  */
 export const BunPgNativeSubscriber = BunPgSubscriber;

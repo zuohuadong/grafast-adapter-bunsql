@@ -87,7 +87,7 @@ declare global {
 
     interface SQLPostgresOrMySQLOptions {
       adapter: string;
-      url?: string;
+      url?: string | URL;
       max?: number;
       idleTimeout?: number;
       connectionTimeout?: number;
