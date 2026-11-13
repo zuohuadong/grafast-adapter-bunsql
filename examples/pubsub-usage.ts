@@ -2,19 +2,13 @@
  * Pub/Sub usage example for @dataplan/pg-bun
  */
 
-import { makePgService } from "../src/index.js";
+import { makePgService } from "../src";
 
 // Example 1: Basic Pub/Sub setup
 const pgService = makePgService({
   connectionString: "postgres://localhost:5432/mydb",
   schemas: ["public"],
   pubsub: true,
-  subscriberOptions: {
-    pollInterval: 1000,
-    tableName: "pg_notify_queue",
-    autoCreateTable: true,
-    messageRetention: 3600,
-  },
 });
 
 // Example 2: Simple notification system

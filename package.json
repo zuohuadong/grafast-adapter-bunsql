@@ -19,11 +19,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "bun run build",
     "clean": "rm -rf dist",
-    "pack": "npm pack",
-    "pack-local": "npm pack --pack-destination .",
-    "install-local": "npm install ./*.tgz",
+    "pack": "bun pm pack",
+    "pack-local": "bun pm pack --destination .",
+    "install-local": "bun add ./*.tgz",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
@@ -32,17 +32,17 @@
     "test:performance": "bun test tests/performance"
   },
   "peerDependencies": {
-    "@dataplan/pg": "^1.0.0",
-    "grafast": "^0.1.0"
+    "@dataplan/pg": "^1.2.1",
+    "grafast": "^1.2.0"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^20.0.0",
-    "pg": "^8.11.0",
-    "typescript": "^5.0.0"
+    "@types/bun": "^1.4.4",
+    "@types/node": "^26.6.6",
+    "pg": "^8.23.1",
+    "typescript": "^7.0.2"
   },
   "engines": {
-    "bun": ">=1.3.0"
+    "bun": ">=1.4.0"
   },
   "repository": {
     "type": "git",

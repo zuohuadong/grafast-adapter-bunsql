@@ -115,8 +115,8 @@ function extractNoticesFromError(error: any): PgNotice[] {
   
   // If it's a PostgresError, check for relevant information
   // Check for both actual Bun SQL PostgresError and our mock
-  if (error instanceof Bun.SQLPostgresError ||
-      (error.constructor && error.constructor.name === "PostgresError")) {
+  if (error instanceof Bun.SQL.PostgresError ||
+      error?.constructor?.name === "PostgresError") {
     // Some NOTICEs might appear as warnings in error details
     if (error.hint || error.detail) {
       notices.push({
@@ -267,13 +267,7 @@ export function newBunPgClient(
             }
           }
 
-          // Convert Bun's error format
-          // Check for both actual Bun SQL PostgresError and our mock
-          if (error instanceof Bun.SQLPostgresError ||
-              ((error as any)?.constructor && (error as any).constructor.name === "PostgresError")) {
-            // Bun's error already contains all necessary information
-            throw error;
-          }
+          // Bun's PostgresError already carries the details we need
           throw error;
         }
       }

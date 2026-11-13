@@ -40,16 +40,15 @@ export function makeBunWithPgClient(
         );
         if (entries.length > 0) {
           // Use transaction to apply settings (set to local)
-          await reserved.begin(async (tx) => {
+          return await reserved.begin(async (tx) => {
             for (const [key, value] of entries) {
               await tx.unsafe(`SELECT set_config($1, $2, true)`, [key, String(value)]);
             }
-            
+
             // Execute callback within transaction
             const client = newBunPgClient(tx, 1, false, options);
             return await callback(client);
           });
-          return;
         }
       }
 
@@ -128,11 +127,10 @@ export function makePgService(
     withPgClientKey = name === "main" ? "withPgClient" : `${name}_withPgClient`,
     pgSettingsKey = name === "main" ? "pgSettings" : `${name}_pgSettings`,
     pgSubscriberKey = name === "main" ? "pgSubscriber" : `${name}_pgSubscriber`,
-    pubsub = false, // Implemented using polling method
+    pubsub = false,
     pgSettings,
     pgSettingsForIntrospection,
     captureNotices = false,
-    subscriberOptions,
   } = options;
 
   const releasers: (() => void | Promise<void>)[] = [];
@@ -169,20 +167,10 @@ export function makePgService(
     releasers.push(() => superuserSql!.end());
   }
 
-  // Create subscriber (using polling method)
+  // Create subscriber (LISTEN/NOTIFY) when pubsub is enabled
   let pgSubscriber = options.pgSubscriber ?? null;
   if (!pgSubscriber && pubsub) {
-    console.warn(
-      "WARNING: Using experimental polling-based LISTEN/NOTIFY implementation.\n" +
-      "This approach has significant limitations:\n" +
-      "- Has latency (depends on polling interval)\n" +
-      "- Requires additional database table\n" +
-      "- Consumes more resources\n" +
-      "- Not as efficient as native LISTEN/NOTIFY\n\n" +
-      "Only enable this feature if you understand these limitations and\n" +
-      "have no alternative solution."
-    );
-    pgSubscriber = new BunPgSubscriber(sql, subscriberOptions);
+    pgSubscriber = new BunPgSubscriber(sql as Bun.SQL);
     releasers.push(() => pgSubscriber!.release?.());
   }
 
