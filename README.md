@@ -6,7 +6,7 @@ Bun SQL native adaptor for @dataplan/pg, enabling high-performance GraphQL APIs 
 
 - 🚀 **High Performance** - Leverages Bun's native PostgreSQL driver for 20-80% better performance
 - 🔌 **Drop-in Replacement** - Compatible API with @dataplan/pg's pg adapter
-- 📡 **Experimental Pub/Sub Support** - Implements LISTEN/NOTIFY via polling mechanism (requires manual enablement)
+- 📡 **Pub/Sub (LISTEN/NOTIFY)** - Native PostgreSQL LISTEN/NOTIFY via Bun SQL (opt-in with `pubsub: true`)
 - 📢 **Experimental NOTICE Messages** - Experimental support for PostgreSQL NOTICE messages (requires manual enablement)
 - 🏗️ **Full Transaction Support** - Including savepoints and nested transactions
 - 🌊 **Connection Pooling** - Automatic connection management
@@ -14,7 +14,7 @@ Bun SQL native adaptor for @dataplan/pg, enabling high-performance GraphQL APIs 
 ## Installation
 
 ```bash
-npm install @dataplan/pg-bun
+bun add @dataplan/pg-bun
 ```
 
 ## Peer Dependencies
@@ -22,7 +22,7 @@ npm install @dataplan/pg-bun
 Make sure you have these installed:
 
 ```bash
-npm install @dataplan/pg grafast
+bun add @dataplan/pg grafast
 ```
 
 ## Usage
@@ -61,14 +61,8 @@ const pgService = makePgService({
   },
   // Enable experimental NOTICE capture
   captureNotices: true,
-  // Enable Pub/Sub support
+  // Enable Pub/Sub (LISTEN/NOTIFY) support
   pubsub: true,
-  subscriberOptions: {
-    pollInterval: 1000,     // Polling interval in ms
-    tableName: "pg_notify_queue",  // Notification table name
-    autoCreateTable: true,   // Auto-create notification table
-    messageRetention: 3600,  // Message retention time in seconds
-  },
 });
 ```
 
@@ -112,25 +106,17 @@ await withPgClient(null, async (client) => {
 });
 ```
 
-### Experimental Pub/Sub Support
+### Pub/Sub (LISTEN/NOTIFY)
 
-⚠️ **WARNING**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't support native LISTEN/NOTIFY events, we use polling to implement similar functionality. This approach has significant limitations:
+Pub/Sub is built on PostgreSQL's native `LISTEN`/`NOTIFY`, through Bun SQL's `listen()` and `notify()`. It is stable and no longer experimental. There is no polling and no notification table.
 
-- Has latency (depends on polling interval)
-- Requires additional database table
-- Consumes more resources
-- Not as efficient as native LISTEN/NOTIFY
-
-Only enable this feature if you understand these limitations and have no alternative solution.
+Enable it with `pubsub: true`. The subscriber is then available on the GraphQL context as `pgSubscriber`, or `<name>_pgSubscriber` for a named service.
 
 ```typescript
 const pgService = makePgService({
   connectionString: process.env.DATABASE_URL,
   schemas: ["public"],
-  pubsub: true,  // Enable experimental Pub/Sub support
-  subscriberOptions: {
-    pollInterval: 1000,
-  },
+  pubsub: true,  // Create a BunPgSubscriber
 });
 
 // Subscribe to notifications
@@ -145,12 +131,14 @@ for await (const payload of notifications) {
 await subscriber.notify("my_channel", "Hello World!");
 ```
 
-#### Limitations of Pub/Sub Implementation
+Behaviour to be aware of:
 
-1. **Latency**: Default 1 second (configurable) due to polling
-2. **Additional Table Required**: For notification queue
-3. **Resource Consumption**: Continuous polling consumes resources
-4. **Bun Only**: Cannot be used in Node.js
+- **Payloads are strings.** `notify(channel, payload?)` takes an optional string, as PostgreSQL does.
+- **Buffering:** notifications that arrive while no `next()` is pending are queued in order and delivered on the next read.
+- **Cleanup:** breaking out of the `for await` loop, or calling `return()` on the iterator, removes that registration and discards its buffer.
+- **Errors:** if `LISTEN` fails, pending reads reject with the error.
+- **Shutdown:** `release()` ends every open subscription. Afterwards, `subscribe()` throws.
+- **Typed topics:** pass a topic map as the generic parameter of `BunPgSubscriber<TTopics>` to type each channel's payloads.
 
 ### Experimental NOTICE Messages
 
@@ -190,8 +178,8 @@ if (result.notices && result.notices.length > 0) {
 
 ### Classes
 
-- `BunPgSubscriber<TTopics>` - Polling-based PostgreSQL subscriber (experimental)
-- `BunPgNativeSubscriber` - Alias for BunPgSubscriber (experimental)
+- `BunPgSubscriber<TTopics>` - LISTEN/NOTIFY subscriber backed by Bun SQL's `listen()`/`notify()`
+- `BunPgNativeSubscriber` - Alias for BunPgSubscriber
 
 ### Interfaces
 
@@ -209,24 +197,9 @@ if (result.notices && result.notices.length > 0) {
 
 ## Limitations
 
-### Experimental Features
-
-1. **Pub/Sub Support**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't support native LISTEN/NOTIFY events, we use polling to implement similar functionality. This approach has significant limitations:
-   - Has latency (depends on polling interval)
-   - Requires additional database table
-   - Consumes more resources
-   - Not as efficient as native LISTEN/NOTIFY
-
-2. **NOTICE Messages**: This is an experimental feature that requires manual enablement. Since Bun SQL doesn't directly expose NOTICE messages, we use a workaround to capture them. This approach has significant limitations:
-   - May not capture all NOTICE messages
-   - Relies on parsing error messages
-   - Not as reliable as native NOTICE handling
-
 ### Other Limitations
 
-3. **LISTEN/NOTIFY Latency**: Default 1 second (configurable) due to polling
-4. **Additional Table Required**: For notification queue
-5. **Bun Only**: Cannot be used in Node.js
+1. **Bun Only**: Cannot be used in Node.js
 
 ## Compatibility
 
@@ -239,16 +212,16 @@ if (result.notices && result.notices.length > 0) {
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Build
-npm run build
+bun run build
 
 # Watch mode
-npm run dev
+bun run dev
 
 # Clean build artifacts
-npm run clean
+bun run clean
 ```
 
 ## Contributing
